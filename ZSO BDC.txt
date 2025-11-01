@@ -1,0 +1,37 @@
+*--------------------------------------------------------------------*
+* Program Name : ZSO_BDC_UPLOAD
+* Description  : Upload multiple sales orders from Excel file
+*--------------------------------------------------------------------*
+
+REPORT zso_bdc_upload.
+
+PARAMETERS: p_file TYPE rlgrap-filename OBLIGATORY.
+
+DATA: it_data TYPE TABLE OF alsmex_tabline,
+      wa_data TYPE alsmex_tabline,
+      bdcdata TYPE TABLE OF bdcdata WITH HEADER LINE.
+
+*--------------------------------------------------------------------*
+* Upload Excel File
+*--------------------------------------------------------------------*
+CALL FUNCTION 'ALSM_EXCEL_TO_INTERNAL_TABLE'
+  EXPORTING
+    filename                = p_file
+    i_begin_col             = 1
+    i_begin_row             = 2
+    i_end_col               = 6
+    i_end_row               = 9999
+  TABLES
+    intern                  = it_data.
+
+*--------------------------------------------------------------------*
+* BDC Recording for VA01 (Sales Order Creation)
+*--------------------------------------------------------------------*
+LOOP AT it_data INTO wa_data.
+  PERFORM bdc_dynpro      USING 'SAPMV45A' '0101'.
+  PERFORM bdc_field        USING 'BDC_OKCODE' '/00'.
+  PERFORM bdc_field        USING 'VBAK-AUART' 'OR'.
+  PERFORM bdc_field        USING 'VBAK-KUNNR' wa_data-value.
+ENDLOOP.
+
+CALL TRANSACTION 'VA01' USING bdcdata MODE 'A'.
