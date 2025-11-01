@@ -1,0 +1,103 @@
+*--------------------------------------------------------------------*
+* Program Name : ZSO_MAIN_PROGRAM
+* Project      : Sales Order Management System
+* Description  : Display and manage customer sales orders
+* Author       : Deepak U
+*--------------------------------------------------------------------*
+
+REPORT zso_main_program.
+
+*--------------------------------------------------------------------*
+* Data Declarations
+*--------------------------------------------------------------------*
+TABLES: vbak, vbap, kna1.
+
+TYPES: BEGIN OF ty_sales,
+         vbeln  TYPE vbak-vbeln,   "Sales Document Number
+         erdat  TYPE vbak-erdat,   "Created On
+         kunnr  TYPE vbak-kunnr,   "Customer Number
+         name1  TYPE kna1-name1,   "Customer Name
+         matnr  TYPE vbap-matnr,   "Material Number
+         arktx  TYPE vbap-arktx,   "Material Description
+         kwmeng TYPE vbap-kwmeng,  "Order Quantity
+         netwr  TYPE vbak-netwr,   "Net Value
+         status TYPE c LENGTH 20,  "Custom Status Text
+       END OF ty_sales.
+
+DATA: it_sales TYPE TABLE OF ty_sales,
+      wa_sales TYPE ty_sales.
+
+*--------------------------------------------------------------------*
+* Selection Screen
+*--------------------------------------------------------------------*
+PARAMETERS: p_kunnr TYPE vbak-kunnr OBLIGATORY,
+            p_datef TYPE vbak-erdat,
+            p_datet TYPE vbak-erdat.
+
+*--------------------------------------------------------------------*
+* START-OF-SELECTION
+*--------------------------------------------------------------------*
+START-OF-SELECTION.
+
+  SELECT a~vbeln a~erdat a~kunnr b~matnr b~arktx b~kwmeng a~netwr
+    INTO CORRESPONDING FIELDS OF TABLE @it_sales
+    FROM vbak AS a
+    INNER JOIN vbap AS b ON a~vbeln = b~vbeln
+    WHERE a~kunnr = @p_kunnr
+      AND a~erdat BETWEEN @p_datef AND @p_datet.
+
+  IF sy-subrc <> 0.
+    MESSAGE 'No sales orders found for the given customer/date range' TYPE 'I'.
+    EXIT.
+  ENDIF.
+
+*--------------------------------------------------------------------*
+* Fetch Customer Name
+*--------------------------------------------------------------------*
+  LOOP AT it_sales INTO wa_sales.
+    SELECT SINGLE name1 INTO @wa_sales-name1 FROM kna1 WHERE kunnr = @wa_sales-kunnr.
+
+*--------------------------------------------------------------------*
+* Custom Status Logic
+*--------------------------------------------------------------------*
+    IF wa_sales-netwr > 10000.
+      wa_sales-status = 'High Value Order'.
+    ELSEIF wa_sales-netwr > 5000.
+      wa_sales-status = 'Medium Value Order'.
+    ELSE.
+      wa_sales-status = 'Regular Order'.
+    ENDIF.
+
+    MODIFY it_sales FROM wa_sales.
+  ENDLOOP.
+
+*--------------------------------------------------------------------*
+* Display Output in ALV
+*--------------------------------------------------------------------*
+  PERFORM display_alv.
+
+*--------------------------------------------------------------------*
+* FORM: Display ALV
+*--------------------------------------------------------------------*
+FORM display_alv.
+
+  DATA: lo_alv     TYPE REF TO cl_salv_table,
+        lo_columns TYPE REF TO cl_salv_columns_table,
+        lo_column  TYPE REF TO cl_salv_column_table.
+
+  TRY.
+      cl_salv_table=>factory( IMPORTING r_salv_table = lo_alv
+                              CHANGING  t_table      = it_sales ).
+
+      lo_columns = lo_alv->get_columns( ).
+
+      lo_alv->get_display_settings( )->set_list_header( 'Sales Order Management System' ).
+      lo_alv->get_functions( )->set_all( abap_true ).
+
+      lo_alv->display( ).
+
+    CATCH cx_salv_msg INTO DATA(lx_msg).
+      MESSAGE lx_msg->get_text( ) TYPE 'E'.
+  ENDTRY.
+
+ENDFORM.
