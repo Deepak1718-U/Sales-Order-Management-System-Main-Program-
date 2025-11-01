@@ -1,0 +1,23 @@
+*--------------------------------------------------------------------*
+* Include : ZSO_VALIDATION_EXIT
+* Description : User Exit for Credit Limit Validation
+*--------------------------------------------------------------------*
+
+INCLUDE zso_validation_exit.
+
+FORM check_credit_limit USING iv_kunnr TYPE kunnr
+                              iv_netwr TYPE vbak-netwr.
+
+  DATA: lv_limit TYPE knkk-klimk,
+        lv_used  TYPE knkk-ssobl.
+
+  SELECT SINGLE klimk ssobl INTO (lv_limit, lv_used)
+    FROM knkk WHERE kunnr = iv_kunnr.
+
+  IF sy-subrc = 0.
+    IF iv_netwr + lv_used > lv_limit.
+      MESSAGE 'Customer credit limit exceeded!' TYPE 'E'.
+    ENDIF.
+  ENDIF.
+
+ENDFORM.
