@@ -1,0 +1,20 @@
+SMARTFORM: ZSO_INVOICE_FORM
+
+Purpose: Generate printable invoice for a sales order
+
+Main Windows:
+- Header Window:
+  Displays company logo, name, and address.
+
+- Main Window:
+  Fields:
+    Sales Order: &VBAK-VBELN&
+    Customer: &KNA1-NAME1&
+    Date: &VBAK-ERDAT&
+    Material: &VBAP-MATNR&
+    Description: &VBAP-ARKTX&
+    Quantity: &VBAP-KWMENG&
+    Amount: &VBAK-NETWR&
+
+- Footer:
+  Text: "Thank you for your business!"
