@@ -1,0 +1,32 @@
+*--------------------------------------------------------------------*
+* Program Name : ZSO_ALV_REPORT
+* Description  : ALV Report for displaying all sales orders
+*--------------------------------------------------------------------*
+
+REPORT zso_alv_report.
+
+TABLES: vbak, vbap, kna1.
+
+TYPES: BEGIN OF ty_order,
+         vbeln TYPE vbak-vbeln,
+         erdat TYPE vbak-erdat,
+         kunnr TYPE vbak-kunnr,
+         name1 TYPE kna1-name1,
+         netwr TYPE vbak-netwr,
+       END OF ty_order.
+
+DATA: it_orders TYPE TABLE OF ty_order,
+      wa_order  TYPE ty_order.
+
+SELECT a~vbeln a~erdat a~kunnr b~netwr
+  INTO CORRESPONDING FIELDS OF TABLE @it_orders
+  FROM vbak AS a
+  INNER JOIN vbap AS b ON a~vbeln = b~vbeln.
+
+LOOP AT it_orders INTO wa_order.
+  SELECT SINGLE name1 INTO @wa_order-name1 FROM kna1 WHERE kunnr = @wa_order-kunnr.
+  MODIFY it_orders FROM wa_order.
+ENDLOOP.
+
+DATA(lo_alv) = cl_salv_table=>factory( t_table = it_orders ).
+lo_alv->display( ).
